@@ -1,0 +1,22 @@
+# Site settings
+title: AWS / DOCKER / 2NDWATCH
+email: lars@2ndwatch.com
+description: > # this means to ignore newlines until "baseurl:"
+  This is a small demo site I used during the techCONNECT talks in Seattle and Atlanta.
+baseurl: "" # the subpath of your site, e.g. /blog/
+url: "http://yourdomain.com" # the base hostname & protocol for your site
+twitter_username: callmeradical
+github_username:  callmeradical
+
+# Build settings
+markdown: kramdown
+
+gallery:
+  dir: photos
+  title: "Photos"
+  thumbnail_size:
+    x: 400
+    y: 400
+
+gems:
+  - jekyll-gallery-generator
