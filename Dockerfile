@@ -20,6 +20,8 @@ RUN git clone https://github.com/callmeradical/aws_techconnect /src
 
 WORKDIR /src
 
+RUN chmod +x scripts/sync.sh
+
 RUN /usr/bin/gem install bundler
 
 RUN bundle install
