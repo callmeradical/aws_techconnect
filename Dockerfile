@@ -10,7 +10,8 @@ RUN apk add \
     build-base \
     libffi-dev \
     nodejs \
-    python
+    python \
+    openjdk7-jre 
 
 RUN curl -sq "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
 RUN unzip awscli-bundle.zip
@@ -28,4 +29,4 @@ RUN bundle install
 
 RUN bundle exec jekyll build
 
-ENTRYPOINT /usr/bin/ruby scripts/set_env.rb && source creds && ./scripts/sync.sh && s3_website_push
+ENTRYPOINT /usr/bin/ruby scripts/set_env.rb && source creds && ./scripts/sync.sh
