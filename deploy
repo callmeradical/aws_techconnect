@@ -1,6 +1,0 @@
-#!/bin/bash
-
-ruby set_env.rb
-source creds
-sh sync.sh
-s3_website push

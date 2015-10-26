@@ -93,7 +93,7 @@
         "ContainerDefinitions":[
           {
             "Name":"siteupload",
-            "Image":"callmeradical/techconnect:1.1",
+            "Image":"callmeradical/techconnect:latest",
             "Memory":"500",
             "Cpu":"10"
           }

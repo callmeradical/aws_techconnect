@@ -26,4 +26,4 @@ RUN bundle install
 
 RUN bundle exec jekyll build
 
-ENTRYPOINT ./deploy
+ENTRYPOINT /usr/bin/ruby scripts/set_env.rb && source scripts/creds && ./scripts/sync.sh && s3_website_push
