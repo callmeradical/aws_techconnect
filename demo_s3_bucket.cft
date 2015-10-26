@@ -1,0 +1,199 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "photobucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "AccessControl": "PublicReadWrite",
+                "BucketName": "2wtechconnectphoto",
+                "NotificationConfiguration": {
+                  "TopicConfigurations": [
+                    {
+                      "Event": "s3:ObjectCreated:Put",
+                      "Topic": {
+                        "Ref": "photolambda"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+        },
+        "sitebucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "AccessControl": "PublicRead",
+                "BucketName": "2wtechconnectsite",
+                "WebsiteConfiguration": {
+                    "IndexDocument": "index.html"
+                }
+            }
+        },
+        "sitepolicy": {
+          "Type": "AWS::S3::BucketPolicy",
+          "Properties": {
+            "Bucket": { "Ref": "sitebucket" },
+            "PolicyDocument": {
+            	"Version": "2012-10-17",
+            	"Statement": [ {
+          			"Sid": "PublicReadGetObject",
+          			"Effect": "Allow",
+          			"Principal": "*",
+          			"Action": [ "s3:GetObject" ],
+          			"Resource": [	"arn:aws:s3:::2wtechconnectsite/*" ]
+            		}
+            	]
+            }
+          }
+        },
+        "subnet": {
+          "Type": "AWS::EC2::Subnet",
+          "Properties": {
+            "AvailabilityZone": "us-east-1a",
+            "CidrBlock": "172.16.1.0/24",
+            "MapPublicIpOnLaunch": false,
+            "VpcId": {
+                "Ref": "vpc"
+            }
+          }
+        },
+        "launchconfig": {
+          "Type": "AWS::AutoScaling::LaunchConfiguration",
+          "Properties": {
+            "IamInstanceProfile": {"Ref": "instanceprofile"},
+            "ImageId": "ami-34ddbe5c",
+            "InstanceType": "t2.large"
+          }
+        },
+        "autoscale": {
+          "Type": "AWS::AutoScaling::AutoScalingGroup",
+          "Properties": {
+            "AvailabilityZones": ["us-east-1a"],
+            "MinSize": "1",
+            "MaxSize": "10",
+            "LaunchConfigurationName": {
+              "Ref": "launchconfig"
+            }
+          }
+        },
+        "instanceprofile": {
+          "Type": "AWS::IAM::InstanceProfile",
+          "Properties": {
+            "Path": "/",
+            "Roles": [ { "Ref": "iamrole"} ]
+          }
+        },
+        "photolambda":{
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Description": "Launch ECS task to rebuild static site",
+            "Handler": "index.handler",
+            "Role": { "Fn::GetAtt": ["lambdaexecutionrole", "Arn" ] },
+            "Runtime": "nodejs",
+            "Code": {
+              "ZipFile": { "Fn::Join" : ["", [
+                "console.log('Loading function');\n",
+                "var aws = require('aws-sdk');\n",
+                "exports.handler = function(event, context) {\n",
+                  "\tvar ecs = new aws.ECS();\n",
+                  "\tvar params = {\n",
+                    "\t\ttaskDefinition: ", { "Ref": "ecstask"}, "\n",
+                    "\t\tcount: 1,\n",
+                    "\t\tstartedBy: 'lambda'\n",
+                  "\t};\n",
+                  "\tecs.runTask(params, function(err, data) {\n",
+                    "\tif (err) console.log(err, err.stack);\n",
+                    "\telse    { console.log(data); context.succeed('yew!');}\n",
+                  "\t});\n",
+                "};\n"
+                ]]
+              }
+            }
+          }
+        },
+        "ecstask": {
+          "Type": "AWS::ECS::TaskDefinition",
+          "Properties": {
+            "ContainerDefinitions": [
+              {
+                "Name": "siteupload",
+                "Image": "callmeradical/techconnect",
+                "Memory": "500",
+                "Cpu": "10"
+              }
+            ],
+            "Volumes": []
+          }
+        },
+        "lambdaexecutionrole": {
+          "Type": "AWS::IAM::Role",
+          "Properties": {
+            "AssumeRolePolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": {"Service": ["lambda.amazonaws.com"]},
+                "Action": ["sts:AssumeRole"]
+              }]
+            },
+            "Path": "/",
+            "Policies": [{
+              "PolicyName": "root",
+              "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [{
+                  "Effect": "Allow",
+                  "Action": ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"],
+                  "Resource": "arn:aws:logs:*:*:*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["cloudformation:DescribeStacks"],
+                  "Resource": "*"
+                }]
+              }
+            }]
+          }
+        },
+        "iamrole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [  {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": ["ec2.amazonaws.com"]
+                  },
+                  "Action": [ "sts:AssumeRole"]
+                  }  ]
+                },
+                "Path": "/",
+                "Policies": [ {
+                  "PolicyName": "root",
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [ {
+                      "Action": "s3:*",
+                      "Effect": "Allow",
+                      "Resource": "*"
+                    },
+                    {
+                      "Action": "ecs:*",
+                      "Effect": "Allow",
+                      "Resource": "*"
+                    }
+                  ]
+                }
+              } ]
+            }
+          },
+          "vpc": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+              "CidrBlock": "172.16.1.0/22",
+              "EnableDnsSupport": true,
+              "EnableDnsHostnames": true
+            }
+          }
+    }

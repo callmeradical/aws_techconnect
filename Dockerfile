@@ -1,19 +1,29 @@
-FROM ubuntu:12.04.5
+FROM gliderlabs/alpine
 
-RUN apt-get update 
-RUN apt-get install -y \
-    imagemagick \
-    libmagickwand-dev \
-    ruby1.9.3 \
-    rubygems \
-    git
+RUN apk update
+RUN apk upgrade
 
-RUN gem install bundler
+RUN apk add \
+    git \
+    imagemagick-dev \
+    ruby-dev \
+    build-base \
+    libffi-dev \
+    nodejs \
+    python
 
-#RUN git clone https://github.com/callmeradical/aws_techconnect /src
+RUN curl -sq "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
+RUN unzip awscli-bundle.zip
+RUN ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 
-#WORKDIR /src
+RUN git clone https://github.com/callmeradical/aws_techconnect /src
 
-#RUN bundle install
+WORKDIR /src
 
-#RUN jekyll b
+RUN /usr/bin/gem install bundler
+
+RUN bundle install
+
+RUN bundle exec jekyll build
+
+ENTRYPOINT ./deploy
